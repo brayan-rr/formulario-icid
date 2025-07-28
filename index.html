@@ -47,13 +47,16 @@
     <div class="scanner-container mt-3" id="reader"></div>
 </div>
 
-<script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+<!-- Librería correcta -->
+<script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
 <script>
+    // Colocar la fecha actual
     document.getElementById('fecha').value = new Date().toLocaleDateString('es-PE');
 
     let html5QrCode;
     let currentInput = '';
 
+    // Iniciar escáner
     async function startScanner(inputId) {
         try {
             // Solicitar permiso explícitamente
@@ -81,6 +84,7 @@
         }
     }
 
+    // Detener escáner
     function stopScanner() {
         if (html5QrCode) {
             html5QrCode.stop().then(() => {
@@ -89,6 +93,7 @@
         }
     }
 
+    // Calcular cantidad de ICID
     function calcularCantidad() {
         let inicioStr = document.getElementById('serieInicio').value;
         let finStr = document.getElementById('serieFinal').value;
@@ -99,6 +104,7 @@
         document.getElementById('cantidad').value = cantidad;
     }
 
+    // Evento de envío
     document.getElementById("chipForm").addEventListener("submit", function(e){
         e.preventDefault();
         alert("Datos enviados correctamente ✅");
