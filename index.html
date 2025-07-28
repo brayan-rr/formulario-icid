@@ -30,12 +30,14 @@
             <div class="input-group">
                 <input type="text" id="serieInicio" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieInicio')">📷</button>
+                <input type="file" accept="image/*" capture="camera" class="btn btn-outline-info" onchange="scanFromImage(event, 'serieInicio')">
             </div>
         </div>
         <div class="mb-3"><label class="form-label">Serie Final</label>
             <div class="input-group">
                 <input type="text" id="serieFinal" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieFinal')">📷</button>
+                <input type="file" accept="image/*" capture="camera" class="btn btn-outline-info" onchange="scanFromImage(event, 'serieFinal')">
             </div>
         </div>
         <div class="mb-3"><label class="form-label">Cantidad de ICID</label>
@@ -75,6 +77,20 @@
             codeReader.reset();
             document.getElementById('scanner-container').style.display = 'none';
         }
+    }
+
+    // 🔹 Escanear desde foto subida
+    function scanFromImage(event, inputId) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new ZXing.BrowserBarcodeReader();
+        reader.decodeFromImageUrl(URL.createObjectURL(file))
+            .then(result => {
+                document.getElementById(inputId).value = result.text;
+                calcularCantidad();
+            })
+            .catch(() => alert("No se pudo detectar el código, intenta recortar mejor la imagen."));
     }
 
     function calcularCantidad() {
