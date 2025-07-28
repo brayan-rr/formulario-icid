@@ -11,13 +11,10 @@
     <style>
         body { background-color: #f8f9fa; }
         .container { max-width: 600px; margin-top: 20px; }
-        .scanner-container { display: none; text-align: center; }
-        video { width: 100%; height: 200px; border: 2px solid #007bff; object-fit: cover; }
-        canvas { display: none; }
+        video { width: 100%; height: 250px; border: 2px solid #007bff; object-fit: cover; }
         .readonly-input { background-color: #e9ecef; }
         #crop-container { display: none; text-align: center; margin-top: 10px; }
         #preview { max-width: 100%; max-height: 300px; }
-        .btn-group-custom button { width: 48%; }
     </style>
 </head>
 <body>
@@ -37,9 +34,9 @@
         <div class="mb-3">
             <label class="form-label">Serie Inicio</label>
             <input type="text" id="serieInicio" class="form-control mb-2" oninput="calcularCantidad()">
-            <div class="btn-group-custom d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieInicio')">📷 Escanear</button>
-                <button type="button" class="btn btn-outline-info" onclick="startCameraForPhoto('serieInicio')">📸 Tomar Foto</button>
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary w-50 me-1" onclick="startScanner('serieInicio')">📷 Escanear</button>
+                <button type="button" class="btn btn-outline-info w-50" onclick="takePhoto('serieInicio')">📸 Tomar Foto</button>
             </div>
         </div>
 
@@ -47,9 +44,9 @@
         <div class="mb-3">
             <label class="form-label">Serie Final</label>
             <input type="text" id="serieFinal" class="form-control mb-2" oninput="calcularCantidad()">
-            <div class="btn-group-custom d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieFinal')">📷 Escanear</button>
-                <button type="button" class="btn btn-outline-info" onclick="startCameraForPhoto('serieFinal')">📸 Tomar Foto</button>
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary w-50 me-1" onclick="startScanner('serieFinal')">📷 Escanear</button>
+                <button type="button" class="btn btn-outline-info w-50" onclick="takePhoto('serieFinal')">📸 Tomar Foto</button>
             </div>
         </div>
 
@@ -62,11 +59,11 @@
     </form>
 
     <!-- Scanner -->
-    <div class="scanner-container mt-3" id="scanner-container">
+    <div class="mt-3" id="scanner-container" style="display:none;">
         <video id="video"></video>
         <div class="mt-2 d-flex justify-content-between">
-            <button class="btn btn-warning" onclick="toggleFlash()">🔦 Linterna</button>
-            <button class="btn btn-danger" onclick="stopScanner()">❌ Cerrar</button>
+            <button class="btn btn-warning w-50 me-1" onclick="toggleFlash()">🔦 Linterna</button>
+            <button class="btn btn-danger w-50" onclick="stopScanner()">❌ Cerrar</button>
         </div>
     </div>
 
@@ -79,26 +76,21 @@
             <button type="button" class="btn btn-danger" onclick="cancelCrop()">❌ Cancelar</button>
         </div>
     </div>
-
-    <canvas id="canvas"></canvas>
 </div>
 
 <script>
     document.getElementById('fecha').value = new Date().toLocaleDateString('es-PE');
     let currentInput = '';
-    let codeReader = null;
-    let cropper = null;
-    let targetField = '';
-    let stream;
-    let track;
+    let codeReader;
     let flashOn = false;
+    let track;
 
-    // ✅ Scanner en vivo (sin modificaciones lógicas)
+    // ✅ Scanner automático
     function startScanner(inputId) {
         currentInput = inputId;
         document.getElementById('scanner-container').style.display = 'block';
-
         codeReader = new ZXing.BrowserBarcodeReader();
+
         codeReader.decodeOnceFromVideoDevice({ facingMode: "environment" }, 'video')
         .then(result => {
             document.getElementById(currentInput).value = result.text;
@@ -109,10 +101,8 @@
     }
 
     function stopScanner() {
-        if (codeReader) {
-            codeReader.reset();
-            document.getElementById('scanner-container').style.display = 'none';
-        }
+        if (codeReader) codeReader.reset();
+        document.getElementById('scanner-container').style.display = 'none';
     }
 
     function toggleFlash() {
@@ -121,32 +111,38 @@
         track.applyConstraints({ advanced: [{ torch: flashOn }] }).catch(() => alert("Linterna no soportada"));
     }
 
-    // 📸 Captura de foto y recorte (separado del scanner)
-    function startCameraForPhoto(fieldId) {
-        targetField = fieldId;
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(s => {
-                stream = s;
-                const video = document.getElementById('video');
-                video.srcObject = s;
-                track = s.getVideoTracks()[0];
-                document.getElementById('scanner-container').style.display = 'block';
-            })
-            .catch(() => alert("No se pudo acceder a la cámara"));
+    // 📸 Foto + Crop
+    function takePhoto(fieldId) {
+        let input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.capture = "environment";
+        input.onchange = (e) => {
+            let file = e.target.files[0];
+            let reader = new FileReader();
+            reader.onload = function(event) {
+                let img = document.getElementById('preview');
+                img.src = event.target.result;
+                document.getElementById('crop-container').style.display = 'block';
+                cropper = new Cropper(img, { aspectRatio: NaN });
+                currentInput = fieldId;
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
     }
 
     function cropAndScan() {
-        const canvas = cropper.getCroppedCanvas();
-        const croppedImage = canvas.toDataURL();
-
-        const reader = new ZXing.BrowserBarcodeReader();
+        let canvas = cropper.getCroppedCanvas();
+        let croppedImage = canvas.toDataURL();
+        let reader = new ZXing.BrowserBarcodeReader();
         reader.decodeFromImageUrl(croppedImage)
             .then(result => {
-                document.getElementById(targetField).value = result.text;
+                document.getElementById(currentInput).value = result.text;
                 calcularCantidad();
                 cancelCrop();
             })
-            .catch(() => alert("No se pudo detectar el código, intenta recortar mejor la imagen."));
+            .catch(() => alert("No se pudo detectar el código"));
     }
 
     function cancelCrop() {
@@ -155,12 +151,10 @@
     }
 
     function calcularCantidad() {
-        let inicioStr = document.getElementById('serieInicio').value;
-        let finStr = document.getElementById('serieFinal').value;
-        let inicio = parseInt(inicioStr.slice(-4)) || 0;
-        let fin = parseInt(finStr.slice(-4)) || 0;
+        let inicio = parseInt(document.getElementById('serieInicio').value.slice(-4)) || 0;
+        let fin = parseInt(document.getElementById('serieFinal').value.slice(-4)) || 0;
         let cantidad = 0;
-        if (inicio > 0 && fin > 0 && fin >= inicio) cantidad = (fin - inicio) + 1;
+        if (inicio && fin && fin >= inicio) cantidad = (fin - inicio) + 1;
         document.getElementById('cantidad').value = cantidad;
     }
 
