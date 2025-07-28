@@ -61,13 +61,12 @@
         <button type="submit" class="btn btn-primary w-100">Enviar</button>
     </form>
 
-    <!-- Cámara -->
-    <div class="scanner-container mt-3" id="camera-container">
-        <video id="camera" autoplay></video>
+    <!-- Scanner -->
+    <div class="scanner-container mt-3" id="scanner-container">
+        <video id="video"></video>
         <div class="mt-2 d-flex justify-content-between">
-            <button class="btn btn-success" onclick="capturePhoto()">📸 Tomar Foto</button>
             <button class="btn btn-warning" onclick="toggleFlash()">🔦 Linterna</button>
-            <button class="btn btn-danger" onclick="stopCamera()">❌ Cancelar</button>
+            <button class="btn btn-danger" onclick="stopScanner()">❌ Cerrar</button>
         </div>
     </div>
 
@@ -94,12 +93,13 @@
     let track;
     let flashOn = false;
 
+    // ✅ Scanner en vivo (sin modificaciones lógicas)
     function startScanner(inputId) {
         currentInput = inputId;
-        document.getElementById('camera-container').style.display = 'block';
+        document.getElementById('scanner-container').style.display = 'block';
 
         codeReader = new ZXing.BrowserBarcodeReader();
-        codeReader.decodeOnceFromVideoDevice({ facingMode: "environment" }, 'camera')
+        codeReader.decodeOnceFromVideoDevice({ facingMode: "environment" }, 'video')
         .then(result => {
             document.getElementById(currentInput).value = result.text;
             calcularCantidad();
@@ -111,50 +111,28 @@
     function stopScanner() {
         if (codeReader) {
             codeReader.reset();
-            document.getElementById('camera-container').style.display = 'none';
+            document.getElementById('scanner-container').style.display = 'none';
         }
-    }
-
-    // 📸 Capturar foto con cámara trasera
-    function startCameraForPhoto(fieldId) {
-        targetField = fieldId;
-        document.getElementById('camera-container').style.display = 'block';
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(s => {
-                stream = s;
-                document.getElementById('camera').srcObject = s;
-                track = s.getVideoTracks()[0];
-            })
-            .catch(() => alert("No se pudo acceder a la cámara"));
-    }
-
-    function capturePhoto() {
-        const video = document.getElementById('camera');
-        const canvas = document.getElementById('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        stopCamera();
-
-        const img = document.getElementById('preview');
-        img.src = canvas.toDataURL();
-        document.getElementById('crop-container').style.display = 'block';
-
-        if (cropper) cropper.destroy();
-        cropper = new Cropper(img, { aspectRatio: 4 / 1, viewMode: 1 });
-    }
-
-    function stopCamera() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        document.getElementById('camera-container').style.display = 'none';
     }
 
     function toggleFlash() {
         if (!track) return;
         flashOn = !flashOn;
         track.applyConstraints({ advanced: [{ torch: flashOn }] }).catch(() => alert("Linterna no soportada"));
+    }
+
+    // 📸 Captura de foto y recorte (separado del scanner)
+    function startCameraForPhoto(fieldId) {
+        targetField = fieldId;
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(s => {
+                stream = s;
+                const video = document.getElementById('video');
+                video.srcObject = s;
+                track = s.getVideoTracks()[0];
+                document.getElementById('scanner-container').style.display = 'block';
+            })
+            .catch(() => alert("No se pudo acceder a la cámara"));
     }
 
     function cropAndScan() {
