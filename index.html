@@ -11,7 +11,7 @@
         .container { max-width: 600px; margin-top: 30px; }
         .scanner-container { display: none; margin-top: 10px; }
         .readonly-input { background-color: #e9ecef; }
-        #scanner { width: 100%; height: 300px; }
+        #scanner { width: 100%; height: 300px; border: 2px solid #007bff; }
     </style>
 </head>
 <body>
@@ -63,14 +63,44 @@
                 target: document.querySelector('#scanner'),
                 constraints: { facingMode: "environment" }
             },
-            decoder: { readers: ["code_128_reader", "ean_reader"] }
+            decoder: { readers: ["ean_reader", "code_128_reader"] },
+            locate: true,
+            locator: { patchSize: "medium", halfSample: true }
         }, function(err) {
-            if (err) { alert("Error al iniciar cámara: " + err); return; }
+            if (err) { 
+                alert("Error al iniciar cámara: " + err); 
+                return; 
+            }
             Quagga.start();
         });
 
+        Quagga.onProcessed(function(result) {
+            const drawingCtx = Quagga.canvas.ctx.overlay;
+            const drawingCanvas = Quagga.canvas.dom.overlay;
+
+            if (result && result.boxes) {
+                drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                result.boxes
+                    .filter(box => box !== result.box)
+                    .forEach(box => {
+                        Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, {
+                            color: 'green',
+                            lineWidth: 2
+                        });
+                    });
+            }
+
+            if (result && result.box) {
+                Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, {
+                    color: '#FF0000',
+                    lineWidth: 3
+                });
+            }
+        });
+
         Quagga.onDetected(function(result) {
-            document.getElementById(currentInput).value = result.codeResult.code;
+            const code = result.codeResult.code;
+            document.getElementById(currentInput).value = code;
             calcularCantidad();
             stopScanner();
         });
