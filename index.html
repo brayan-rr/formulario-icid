@@ -12,9 +12,9 @@
         body { background-color: #f8f9fa; }
         .container { max-width: 600px; margin-top: 30px; }
         .scanner-container { display: none; text-align: center; }
-        video { width: 90%; height: 120px; border: 2px solid #007bff; object-fit: cover; }
+        video { width: 90%; height: 200px; border: 2px solid #007bff; object-fit: cover; }
+        canvas { display: none; }
         .readonly-input { background-color: #e9ecef; }
-        .d-none { display: none; }
         #crop-container { display: none; text-align: center; margin-top: 10px; }
         #preview { max-width: 100%; max-height: 300px; }
     </style>
@@ -38,9 +38,8 @@
             <div class="input-group">
                 <input type="text" id="serieInicio" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieInicio')">📷 Escanear</button>
-                <button type="button" class="btn btn-outline-info" onclick="document.getElementById('photoInicio').click()">📸 Tomar Foto</button>
+                <button type="button" class="btn btn-outline-info" onclick="startCameraForPhoto('serieInicio')">📸 Capturar Foto</button>
             </div>
-            <input type="file" id="photoInicio" accept="image/*" capture="camera" class="d-none" onchange="previewPhoto(event, 'serieInicio')">
         </div>
 
         <!-- Serie Final -->
@@ -49,9 +48,8 @@
             <div class="input-group">
                 <input type="text" id="serieFinal" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieFinal')">📷 Escanear</button>
-                <button type="button" class="btn btn-outline-info" onclick="document.getElementById('photoFinal').click()">📸 Tomar Foto</button>
+                <button type="button" class="btn btn-outline-info" onclick="startCameraForPhoto('serieFinal')">📸 Capturar Foto</button>
             </div>
-            <input type="file" id="photoFinal" accept="image/*" capture="camera" class="d-none" onchange="previewPhoto(event, 'serieFinal')">
         </div>
 
         <!-- Cantidad -->
@@ -62,10 +60,11 @@
         <button type="submit" class="btn btn-primary w-100">Enviar</button>
     </form>
 
-    <!-- Escáner -->
-    <div class="scanner-container mt-3" id="scanner-container">
-        <video id="video"></video>
-        <p class="text-muted mt-2">Alinea el código dentro de la franja</p>
+    <!-- Cámara -->
+    <div class="scanner-container mt-3" id="camera-container">
+        <video id="camera" autoplay></video>
+        <button class="btn btn-success mt-2" onclick="capturePhoto()">📸 Tomar Foto</button>
+        <button class="btn btn-danger mt-2" onclick="stopCamera()">❌ Cancelar</button>
     </div>
 
     <!-- Cropper -->
@@ -77,6 +76,8 @@
             <button type="button" class="btn btn-danger" onclick="cancelCrop()">❌ Cancelar</button>
         </div>
     </div>
+
+    <canvas id="canvas"></canvas>
 </div>
 
 <script>
@@ -85,13 +86,14 @@
     let codeReader = null;
     let cropper = null;
     let targetField = '';
+    let stream;
 
     function startScanner(inputId) {
         currentInput = inputId;
-        document.getElementById('scanner-container').style.display = 'block';
+        document.getElementById('camera-container').style.display = 'block';
 
         codeReader = new ZXing.BrowserBarcodeReader();
-        codeReader.decodeOnceFromVideoDevice(undefined, 'video')
+        codeReader.decodeOnceFromVideoDevice(undefined, 'camera')
         .then(result => {
             document.getElementById(currentInput).value = result.text;
             calcularCantidad();
@@ -103,22 +105,43 @@
     function stopScanner() {
         if (codeReader) {
             codeReader.reset();
-            document.getElementById('scanner-container').style.display = 'none';
+            document.getElementById('camera-container').style.display = 'none';
         }
     }
 
-    // Tomar foto → recortar
-    function previewPhoto(event, fieldId) {
+    // 📸 Capturar foto con cámara
+    function startCameraForPhoto(fieldId) {
         targetField = fieldId;
-        const file = event.target.files[0];
-        if (!file) return;
+        document.getElementById('camera-container').style.display = 'block';
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(s => {
+                stream = s;
+                document.getElementById('camera').srcObject = s;
+            })
+            .catch(() => alert("No se pudo acceder a la cámara"));
+    }
 
-        document.getElementById('crop-container').style.display = 'block';
+    function capturePhoto() {
+        const video = document.getElementById('camera');
+        const canvas = document.getElementById('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        stopCamera();
+
         const img = document.getElementById('preview');
-        img.src = URL.createObjectURL(file);
+        img.src = canvas.toDataURL();
+        document.getElementById('crop-container').style.display = 'block';
 
         if (cropper) cropper.destroy();
         cropper = new Cropper(img, { aspectRatio: 4 / 1, viewMode: 1 });
+    }
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        document.getElementById('camera-container').style.display = 'none';
     }
 
     function cropAndScan() {
