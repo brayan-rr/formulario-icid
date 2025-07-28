@@ -38,9 +38,9 @@
             <div class="input-group">
                 <input type="text" id="serieInicio" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieInicio')">📷 Escanear</button>
+                <button type="button" class="btn btn-outline-info" onclick="document.getElementById('photoInicio').click()">📸 Tomar Foto</button>
             </div>
-            <button type="button" class="btn btn-outline-info mt-2" onclick="document.getElementById('fileInicio').click()">📂 Subir Foto</button>
-            <input type="file" id="fileInicio" accept="image/*" capture="camera" class="d-none" onchange="previewImage(event, 'serieInicio')">
+            <input type="file" id="photoInicio" accept="image/*" capture="camera" class="d-none" onchange="previewPhoto(event, 'serieInicio')">
         </div>
 
         <!-- Serie Final -->
@@ -49,9 +49,9 @@
             <div class="input-group">
                 <input type="text" id="serieFinal" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieFinal')">📷 Escanear</button>
+                <button type="button" class="btn btn-outline-info" onclick="document.getElementById('photoFinal').click()">📸 Tomar Foto</button>
             </div>
-            <button type="button" class="btn btn-outline-info mt-2" onclick="document.getElementById('fileFinal').click()">📂 Subir Foto</button>
-            <input type="file" id="fileFinal" accept="image/*" capture="camera" class="d-none" onchange="previewImage(event, 'serieFinal')">
+            <input type="file" id="photoFinal" accept="image/*" capture="camera" class="d-none" onchange="previewPhoto(event, 'serieFinal')">
         </div>
 
         <!-- Cantidad -->
@@ -107,8 +107,8 @@
         }
     }
 
-    // Vista previa con Cropper
-    function previewImage(event, fieldId) {
+    // Tomar foto → recortar
+    function previewPhoto(event, fieldId) {
         targetField = fieldId;
         const file = event.target.files[0];
         if (!file) return;
