@@ -5,18 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Chips</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
     <style>
         body { background-color: #f8f9fa; }
         .container { max-width: 600px; margin-top: 30px; }
         .scanner-container { display: none; margin-top: 10px; }
         .readonly-input { background-color: #e9ecef; }
+        #scanner { width: 100%; height: 300px; }
     </style>
 </head>
 <body>
 <div class="container shadow p-4 bg-white rounded">
     <h3 class="text-center">Formulario de Registro de Chips</h3>
     <form id="chipForm">
-        <!-- Campos -->
         <div class="mb-3"><label class="form-label">Nombre</label>
             <input type="text" name="nombre" class="form-control" required></div>
         <div class="mb-3"><label class="form-label">DNI</label>
@@ -44,56 +45,42 @@
         <button type="submit" class="btn btn-primary w-100">Enviar</button>
     </form>
 
-    <div class="scanner-container mt-3" id="reader"></div>
+    <div class="scanner-container mt-3" id="scanner"></div>
 </div>
 
-<!-- Librería correcta -->
-<script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
 <script>
-    // Colocar la fecha actual
     document.getElementById('fecha').value = new Date().toLocaleDateString('es-PE');
-
-    let html5QrCode;
     let currentInput = '';
 
-    // Iniciar escáner
-    async function startScanner(inputId) {
-        try {
-            // Solicitar permiso explícitamente
-            await navigator.mediaDevices.getUserMedia({ video: true });
+    function startScanner(inputId) {
+        currentInput = inputId;
+        document.getElementById('scanner').style.display = 'block';
 
-            currentInput = inputId;
-            document.getElementById('reader').style.display = 'block';
+        Quagga.init({
+            inputStream: {
+                name: "Live",
+                type: "LiveStream",
+                target: document.querySelector('#scanner'),
+                constraints: { facingMode: "environment" }
+            },
+            decoder: { readers: ["code_128_reader", "ean_reader"] }
+        }, function(err) {
+            if (err) { alert("Error al iniciar cámara: " + err); return; }
+            Quagga.start();
+        });
 
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
-
-            await html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: 250 },
-                (decodedText) => {
-                    document.getElementById(currentInput).value = decodedText;
-                    calcularCantidad();
-                    stopScanner();
-                },
-                (errorMessage) => console.log("Escaneando...")
-            );
-        } catch (err) {
-            alert("Permiso de cámara denegado o error: " + err);
-        }
+        Quagga.onDetected(function(result) {
+            document.getElementById(currentInput).value = result.codeResult.code;
+            calcularCantidad();
+            stopScanner();
+        });
     }
 
-    // Detener escáner
     function stopScanner() {
-        if (html5QrCode) {
-            html5QrCode.stop().then(() => {
-                document.getElementById('reader').style.display = 'none';
-            }).catch(err => console.log("Error al detener: " + err));
-        }
+        Quagga.stop();
+        document.getElementById('scanner').style.display = 'none';
     }
 
-    // Calcular cantidad de ICID
     function calcularCantidad() {
         let inicioStr = document.getElementById('serieInicio').value;
         let finStr = document.getElementById('serieFinal').value;
@@ -104,7 +91,6 @@
         document.getElementById('cantidad').value = cantidad;
     }
 
-    // Evento de envío
     document.getElementById("chipForm").addEventListener("submit", function(e){
         e.preventDefault();
         alert("Datos enviados correctamente ✅");
