@@ -5,13 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Chips</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <style>
         body { background-color: #f8f9fa; }
         .container { max-width: 600px; margin-top: 30px; }
         .scanner-container { display: none; text-align: center; }
         video { width: 90%; height: 120px; border: 2px solid #007bff; object-fit: cover; }
         .readonly-input { background-color: #e9ecef; }
+        .d-none { display: none; }
+        #crop-container { display: none; text-align: center; margin-top: 10px; }
+        #preview { max-width: 100%; max-height: 300px; }
     </style>
 </head>
 <body>
@@ -26,20 +31,30 @@
             <input type="text" name="punto" class="form-control" required></div>
         <div class="mb-3"><label class="form-label">Celular</label>
             <input type="text" name="celular" class="form-control"></div>
-        <div class="mb-3"><label class="form-label">Serie Inicio</label>
+
+        <!-- Serie Inicio -->
+        <div class="mb-3">
+            <label class="form-label">Serie Inicio</label>
             <div class="input-group">
                 <input type="text" id="serieInicio" class="form-control" oninput="calcularCantidad()">
-                <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieInicio')">📷</button>
-                <input type="file" accept="image/*" capture="camera" class="btn btn-outline-info" onchange="scanFromImage(event, 'serieInicio')">
+                <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieInicio')">📷 Escanear</button>
             </div>
+            <button type="button" class="btn btn-outline-info mt-2" onclick="document.getElementById('fileInicio').click()">📂 Subir Foto</button>
+            <input type="file" id="fileInicio" accept="image/*" capture="camera" class="d-none" onchange="previewImage(event, 'serieInicio')">
         </div>
-        <div class="mb-3"><label class="form-label">Serie Final</label>
+
+        <!-- Serie Final -->
+        <div class="mb-3">
+            <label class="form-label">Serie Final</label>
             <div class="input-group">
                 <input type="text" id="serieFinal" class="form-control" oninput="calcularCantidad()">
-                <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieFinal')">📷</button>
-                <input type="file" accept="image/*" capture="camera" class="btn btn-outline-info" onchange="scanFromImage(event, 'serieFinal')">
+                <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieFinal')">📷 Escanear</button>
             </div>
+            <button type="button" class="btn btn-outline-info mt-2" onclick="document.getElementById('fileFinal').click()">📂 Subir Foto</button>
+            <input type="file" id="fileFinal" accept="image/*" capture="camera" class="d-none" onchange="previewImage(event, 'serieFinal')">
         </div>
+
+        <!-- Cantidad -->
         <div class="mb-3"><label class="form-label">Cantidad de ICID</label>
             <input type="text" id="cantidad" class="form-control readonly-input" readonly></div>
         <div class="mb-3"><label class="form-label">Fecha de Registro</label>
@@ -47,9 +62,20 @@
         <button type="submit" class="btn btn-primary w-100">Enviar</button>
     </form>
 
+    <!-- Escáner -->
     <div class="scanner-container mt-3" id="scanner-container">
         <video id="video"></video>
         <p class="text-muted mt-2">Alinea el código dentro de la franja</p>
+    </div>
+
+    <!-- Cropper -->
+    <div id="crop-container">
+        <h5>Recorta la zona del código</h5>
+        <img id="preview">
+        <div class="mt-2">
+            <button type="button" class="btn btn-success" onclick="cropAndScan()">✅ Escanear Recorte</button>
+            <button type="button" class="btn btn-danger" onclick="cancelCrop()">❌ Cancelar</button>
+        </div>
     </div>
 </div>
 
@@ -57,6 +83,8 @@
     document.getElementById('fecha').value = new Date().toLocaleDateString('es-PE');
     let currentInput = '';
     let codeReader = null;
+    let cropper = null;
+    let targetField = '';
 
     function startScanner(inputId) {
         currentInput = inputId;
@@ -79,18 +107,37 @@
         }
     }
 
-    // 🔹 Escanear desde foto subida
-    function scanFromImage(event, inputId) {
+    // Vista previa con Cropper
+    function previewImage(event, fieldId) {
+        targetField = fieldId;
         const file = event.target.files[0];
         if (!file) return;
 
+        document.getElementById('crop-container').style.display = 'block';
+        const img = document.getElementById('preview');
+        img.src = URL.createObjectURL(file);
+
+        if (cropper) cropper.destroy();
+        cropper = new Cropper(img, { aspectRatio: 4 / 1, viewMode: 1 });
+    }
+
+    function cropAndScan() {
+        const canvas = cropper.getCroppedCanvas();
+        const croppedImage = canvas.toDataURL();
+
         const reader = new ZXing.BrowserBarcodeReader();
-        reader.decodeFromImageUrl(URL.createObjectURL(file))
+        reader.decodeFromImageUrl(croppedImage)
             .then(result => {
-                document.getElementById(inputId).value = result.text;
+                document.getElementById(targetField).value = result.text;
                 calcularCantidad();
+                cancelCrop();
             })
             .catch(() => alert("No se pudo detectar el código, intenta recortar mejor la imagen."));
+    }
+
+    function cancelCrop() {
+        document.getElementById('crop-container').style.display = 'none';
+        if (cropper) cropper.destroy();
     }
 
     function calcularCantidad() {
