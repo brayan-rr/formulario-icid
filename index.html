@@ -11,16 +11,16 @@
         .container { max-width: 600px; margin-top: 30px; }
         .scanner-container { display: none; margin-top: 10px; position: relative; }
         .readonly-input { background-color: #e9ecef; }
-        #scanner { width: 100%; height: 300px; border: 2px solid #007bff; position: relative; }
-        .scan-line {
+        #scanner { width: 100%; height: 180px; border: 2px solid #007bff; position: relative; }
+        .scan-guide {
             position: absolute;
-            top: 0;
-            left: 50%;
-            width: 2px;
-            height: 100%;
-            background: red;
-            transform: translateX(-50%);
+            top: 40%;
+            left: 10%;
+            width: 80%;
+            height: 20%;
+            border: 2px dashed red;
             z-index: 10;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -57,7 +57,7 @@
 
     <div class="scanner-container mt-3" id="scanner-container">
         <div id="scanner"></div>
-        <div class="scan-line"></div>
+        <div class="scan-guide"></div>
     </div>
 </div>
 
@@ -78,7 +78,13 @@
             },
             decoder: { readers: ["ean_reader", "code_128_reader"] },
             locate: true,
-            locator: { patchSize: "small", halfSample: true }
+            locator: { patchSize: "small", halfSample: true },
+            area: { // Solo parte central horizontal
+                top: "40%",
+                right: "10%",
+                left: "10%",
+                bottom: "40%"
+            }
         }, function(err) {
             if (err) { 
                 alert("Error al iniciar cámara: " + err); 
