@@ -16,53 +16,31 @@
 <div class="container shadow p-4 bg-white rounded">
     <h3 class="text-center">Formulario de Registro de Chips</h3>
     <form id="chipForm">
-        <!-- Nombre -->
-        <div class="mb-3">
-            <label class="form-label">Nombre</label>
-            <input type="text" name="nombre" class="form-control" required>
-        </div>
-        <!-- DNI -->
-        <div class="mb-3">
-            <label class="form-label">DNI</label>
-            <input type="text" name="dni" class="form-control" required>
-        </div>
-        <!-- Punto de Venta -->
-        <div class="mb-3">
-            <label class="form-label">Punto de Venta</label>
-            <input type="text" name="punto" class="form-control" required>
-        </div>
-        <!-- Celular -->
-        <div class="mb-3">
-            <label class="form-label">Celular</label>
-            <input type="text" name="celular" class="form-control">
-        </div>
-        <!-- Serie Inicio -->
-        <div class="mb-3">
-            <label class="form-label">Serie Inicio</label>
+        <!-- Campos -->
+        <div class="mb-3"><label class="form-label">Nombre</label>
+            <input type="text" name="nombre" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">DNI</label>
+            <input type="text" name="dni" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Punto de Venta</label>
+            <input type="text" name="punto" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Celular</label>
+            <input type="text" name="celular" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Serie Inicio</label>
             <div class="input-group">
-                <input type="text" name="serie_inicio" id="serieInicio" class="form-control" oninput="calcularCantidad()">
+                <input type="text" id="serieInicio" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieInicio')">📷</button>
             </div>
         </div>
-        <!-- Serie Final -->
-        <div class="mb-3">
-            <label class="form-label">Serie Final</label>
+        <div class="mb-3"><label class="form-label">Serie Final</label>
             <div class="input-group">
-                <input type="text" name="serie_final" id="serieFinal" class="form-control" oninput="calcularCantidad()">
+                <input type="text" id="serieFinal" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieFinal')">📷</button>
             </div>
         </div>
-        <!-- Cantidad de ICID -->
-        <div class="mb-3">
-            <label class="form-label">Cantidad de ICID</label>
-            <input type="text" id="cantidad" class="form-control readonly-input" readonly>
-        </div>
-        <!-- Fecha de Registro -->
-        <div class="mb-3">
-            <label class="form-label">Fecha de Registro</label>
-            <input type="text" name="fecha" id="fecha" class="form-control readonly-input" readonly>
-        </div>
-
+        <div class="mb-3"><label class="form-label">Cantidad de ICID</label>
+            <input type="text" id="cantidad" class="form-control readonly-input" readonly></div>
+        <div class="mb-3"><label class="form-label">Fecha de Registro</label>
+            <input type="text" id="fecha" class="form-control readonly-input" readonly></div>
         <button type="submit" class="btn btn-primary w-100">Enviar</button>
     </form>
 
@@ -71,51 +49,62 @@
 
 <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 <script>
-    // Colocar fecha actual
     document.getElementById('fecha').value = new Date().toLocaleDateString('es-PE');
 
+    let html5QrCode;
     let currentInput = '';
 
-    // Iniciar escáner
-    function startScanner(inputId) {
-        currentInput = inputId;
-        document.getElementById('reader').style.display = 'block';
+    async function startScanner(inputId) {
+        try {
+            // Solicitar permiso explícitamente
+            await navigator.mediaDevices.getUserMedia({ video: true });
 
-        const html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: 250 },
-            qrCodeMessage => {
-                document.getElementById(inputId).value = qrCodeMessage;
-                html5QrCode.stop();
-                document.getElementById('reader').style.display = 'none';
-                calcularCantidad();
-            },
-            errorMessage => { console.log("Escaneando..."); }
-        );
+            currentInput = inputId;
+            document.getElementById('reader').style.display = 'block';
+
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                (decodedText) => {
+                    document.getElementById(currentInput).value = decodedText;
+                    calcularCantidad();
+                    stopScanner();
+                },
+                (errorMessage) => console.log("Escaneando...")
+            );
+        } catch (err) {
+            alert("Permiso de cámara denegado o error: " + err);
+        }
     }
 
-    // Calcular cantidad tomando últimos 4 dígitos
+    function stopScanner() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                document.getElementById('reader').style.display = 'none';
+            }).catch(err => console.log("Error al detener: " + err));
+        }
+    }
+
     function calcularCantidad() {
         let inicioStr = document.getElementById('serieInicio').value;
         let finStr = document.getElementById('serieFinal').value;
-
         let inicio = parseInt(inicioStr.slice(-4)) || 0;
         let fin = parseInt(finStr.slice(-4)) || 0;
-
         let cantidad = 0;
-
-        if (inicio > 0 && fin > 0 && fin >= inicio) {
-            cantidad = (fin - inicio) + 1;
-        }
-
+        if (inicio > 0 && fin > 0 && fin >= inicio) cantidad = (fin - inicio) + 1;
         document.getElementById('cantidad').value = cantidad;
     }
 
-    // Evento de envío
     document.getElementById("chipForm").addEventListener("submit", function(e){
         e.preventDefault();
         alert("Datos enviados correctamente ✅");
+        this.reset();
+        document.getElementById('cantidad').value = '';
+        document.getElementById('fecha').value = new Date().toLocaleDateString('es-PE');
     });
 </script>
 </body>
