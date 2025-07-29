@@ -28,22 +28,22 @@
             <input type="text" name="celular" class="form-control"></div>
         <div class="mb-3"><label class="form-label">Serie Inicio</label>
             <div class="input-group">
-                <input type="text" id="serieInicio" name="serieInicio" class="form-control" oninput="calcularCantidad()">
+                <input type="text" id="serieInicio" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieInicio')">📷</button>
                 <input type="file" accept="image/*" capture="camera" class="btn btn-outline-info" onchange="scanFromImage(event, 'serieInicio')">
             </div>
         </div>
         <div class="mb-3"><label class="form-label">Serie Final</label>
             <div class="input-group">
-                <input type="text" id="serieFinal" name="serieFinal" class="form-control" oninput="calcularCantidad()">
+                <input type="text" id="serieFinal" class="form-control" oninput="calcularCantidad()">
                 <button type="button" class="btn btn-outline-secondary" onclick="startScanner('serieFinal')">📷</button>
                 <input type="file" accept="image/*" capture="camera" class="btn btn-outline-info" onchange="scanFromImage(event, 'serieFinal')">
             </div>
         </div>
         <div class="mb-3"><label class="form-label">Cantidad de ICID</label>
-            <input type="text" id="cantidad" name="cantidad" class="form-control readonly-input" readonly></div>
+            <input type="text" id="cantidad" class="form-control readonly-input" readonly></div>
         <div class="mb-3"><label class="form-label">Fecha de Registro</label>
-            <input type="text" id="fecha" name="fecha" class="form-control readonly-input" readonly></div>
+            <input type="text" id="fecha" class="form-control readonly-input" readonly></div>
         <button type="submit" class="btn btn-primary w-100">Enviar</button>
     </form>
 
@@ -79,6 +79,7 @@
         }
     }
 
+    // 🔹 Escanear desde foto subida
     function scanFromImage(event, inputId) {
         const file = event.target.files[0];
         if (!file) return;
@@ -105,30 +106,29 @@
     document.getElementById("chipForm").addEventListener("submit", function(e){
         e.preventDefault();
 
-        const formData = {
+        const data = {
             nombre: this.nombre.value,
             dni: this.dni.value,
             punto: this.punto.value,
             celular: this.celular.value,
-            serieInicio: this.serieInicio.value,
-            serieFinal: this.serieFinal.value,
-            cantidad: this.cantidad.value,
-            fecha: this.fecha.value
+            serieInicio: document.getElementById('serieInicio').value,
+            serieFinal: document.getElementById('serieFinal').value,
+            cantidad: document.getElementById('cantidad').value,
+            fecha: document.getElementById('fecha').value
         };
 
-        fetch("https://script.google.com/macros/s/AKfycbwAAAL_zV2NVafrs-4lu8WzKQ0ls_sWI-9rfzXUAdLxHCbZFwOYy4ltmRkjCXUY1hn_/exec", {
+        fetch("https://script.google.com/macros/s/AKfycbyk0Vp7scRjrqGcM6hN67JYcVRq03seE8iNKZDHdLb1_gS09xTw81CRXhCZwzeNfgSx/exec", {
             method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData)
-        }).then(() => {
-            alert("Datos enviados y guardados en Google Sheets ✅");
-            this.reset();
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(response => {
+            alert("Datos enviados correctamente ✅");
+            document.getElementById("chipForm").reset();
             document.getElementById('cantidad').value = '';
             document.getElementById('fecha').value = new Date().toLocaleDateString('es-PE');
-        }).catch(() => {
-            alert("❌ Error al enviar los datos");
-        });
+        })
+        .catch(err => console.error(err));
     });
 </script>
 </body>
